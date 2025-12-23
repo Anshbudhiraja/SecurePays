@@ -1,0 +1,63 @@
+const mongoose = require("mongoose")
+
+const baseSchema = new mongoose.Schema({
+    firstName:{
+        type:String,
+        required:false
+    },
+    lastName:{
+        type:String,
+        required:false
+    },
+    email:{
+        type:String,
+        required:true
+    },
+    phone:{
+        type:String,
+        required:false
+    },
+    password:{
+        type:String,
+        required:false
+    },
+    address:{
+        type:String,
+        required:false
+    },
+    city:{
+        type:String,
+        required:false
+    },
+    state:{
+        type:String,
+        required:false
+    },
+    image:{
+        type:String,
+        required:false
+    },
+    verified:{
+        type:Boolean,
+        required:false,
+        default:false
+    },
+    kyc_verified:{
+        type:Boolean,
+        required:false,
+        default:false
+    },
+    service:{
+        type:Boolean,
+        required:false,
+        default:true
+    },
+    role:{
+        type:String,
+        required:false,
+        enum:["superadmin","admin"],
+        default:"admin"
+    },
+},{timestamps:true})
+const User = mongoose.model("users",baseSchema)
+module.exports = User

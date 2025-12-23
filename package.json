@@ -1,0 +1,26 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Anshbudhiraja/SecurePay#readme",
+  "bugs": {
+    "url": "https://github.com/Anshbudhiraja/SecurePay/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anshbudhiraja/SecurePay.git"
+  },
+  "license": "MIT",
+  "author": "Ansh Budhiraja",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "mongoose": "^9.0.2",
+    "nodemon": "^3.1.11"
+  }
+}
