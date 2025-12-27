@@ -1,7 +1,7 @@
 const mongoose = require("mongoose")
-
+require("dotenv").config()
 const connectDB = async() => {
-   await mongoose.connect("mongodb://localhost:27017/SecurePay")
+   await mongoose.connect(process.env.MONGODB_URI)
    console.log("Connected to MongoDB")
 }
 module.exports = connectDB
