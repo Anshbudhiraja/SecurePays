@@ -17,31 +17,29 @@ const generateOtp = (email) => {
     return otp;
 };
 
-// const verifyOtp = (email, otp) => {
-//     email = email.toLowerCase();
-//     const otpEntry = otpMap.get(email);
+const verifyOtp = (email, otp) => {
+    const otpEntry = otpMap.get(email);
 
-//     if (!otpEntry) {
-//         return { status: false, message: "OTP not found or expired" };
-//     }
+    if (!otpEntry) {
+        return { status: false, message: "OTP not found or expired" };
+    }
 
-//     if (Date.now() > otpEntry.expiry) {
-//         otpMap.delete(email);
-//         return { status: false, message: "OTP expired" };
-//     }
+    if (Date.now() > otpEntry.expiry) {
+        otpMap.delete(email);
+        return { status: false, message: "OTP expired" };
+    }
 
-//     if (otpEntry.otp === otp) {
-//         otpMap.delete(email);
-//         return { status: true, message: "OTP verified successfully" };
-//     }
+    if (otpEntry.otp === otp) {
+        otpMap.delete(email);
+        return { status: true, message: "OTP verified successfully" };
+    }
 
-//     return { status: false, message: "Invalid OTP" };
-// };
+    return { status: false, message: "Invalid OTP" };
+};
 
-// const deleteOtp = (email) => {
-//     email = email.toLowerCase();
-//     const otpEntry = otpMap.get(email);
-//     if(otpEntry) otpMap.delete(email);
-// };
+const deleteOtp = (email) => {
+    const otpEntry = otpMap.get(email);
+    if(otpEntry) otpMap.delete(email);
+};
 
-module.exports = { generateOtp };
+module.exports = { generateOtp,verifyOtp,deleteOtp };
