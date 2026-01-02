@@ -5,6 +5,7 @@ const sendEmail = require("../utils/emailService")
 const { generateOtp,verifyOtp } = require("../utils/otpService")
 const jwt = require("jsonwebtoken")
 require("dotenv").config()
+const mongoose = require("mongoose")
 const loginUser = async(req,resp) => {
     try {
         const {email,password} = req.body
@@ -132,4 +133,130 @@ const verifyUser = async(req,resp) => {
         resp.status(500).send({message:"Internal Server Error",error})
     }
 }
-module.exports = {loginUser,verifyUser}
+const checkUserDetails = async(req,resp) =>{
+    try {
+       const token = req.headers.authorization
+       if(!token || !token.startsWith("Bearer ")){
+          resp.status(400).send({message:"Invalid or Missing Token"})
+          return
+       }
+       const authToken = token.split(" ")[1]
+       if(!authToken){
+        resp.status(400).send({message:"Invalid or Missing Token"})
+        return
+       }
+       const decoded = jwt.verify(authToken,process.env.SECRET_KEY)
+       if(!decoded?.email || !decoded?.id || !mongoose.isValidObjectId(decoded?.id)){
+        resp.status(400).send({message:"Unauthorised User"})
+        return
+       }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if(typeof decoded?.email !== "string" || !emailRegex.test(decoded?.email)){
+            resp.status(400).send({message:"Invalid Email Format"})
+            return
+        }
+
+        const updatedEmail = decoded?.email?.trim()?.toLowerCase()
+        const domain = updatedEmail?.split("@")[1]
+        if(disposableEmailDomains.includes(domain)){
+           resp.status(400).send({message:"Spam Email found. Invalid Email"}) 
+           return
+        }
+    
+        const existingUser = await User.findOne({email:updatedEmail,_id:decoded.id}).select("-password")
+        if(!existingUser){
+            resp.status(400).send({message:"Unauthorised User"})
+            return
+        }
+        if(!existingUser.firstName && !existingUser.lastName){
+            resp.status(400).send({message:"User details not found"})
+            return    
+        }
+        resp.status(200).send({message:"User details fetched",data:existingUser})
+    } catch (error) {
+        return resp.status(500).send({message:"Internal Server Error"})
+    }
+}
+const updateUserDetails = async(req,resp) =>{
+    try {
+        const {firstName,lastName,phone,address,city,state} = req.body
+        const generalRegex = /^[A-Za-z][A-Za-z\s'-]{1,49}$/
+        const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/
+
+        if(!firstName || !lastName || !phone || !address || !city || !state){
+            resp.status(400).send({message:"Missing Details. Field are required"})
+            return
+        }
+        if(!generalRegex.test(firstName)){
+            resp.status(400).send({message:"Invalid FirstName"})
+            return
+        }
+        if(!generalRegex.test(lastName)){
+            resp.status(400).send({message:"Invalid lastName"})
+            return
+        }
+        if(!phoneRegex.test(phone)){
+            resp.status(400).send({message:"Invalid Phone Number"})
+            return
+        }
+        if(!generalRegex.test(address)){
+            resp.status(400).send({message:"Invalid Address"})
+            return
+        }
+        if(!generalRegex.test(city)){
+            resp.status(400).send({message:"Invalid City"})
+            return
+        }
+        if(!generalRegex.test(state)){
+            resp.status(400).send({message:"Invalid State"})
+            return
+        }
+
+       const token = req.headers.authorization
+       if(!token || !token.startsWith("Bearer ")){
+          resp.status(400).send({message:"Invalid or Missing Token"})
+          return
+       }
+       const authToken = token.split(" ")[1]
+       if(!authToken){
+        resp.status(400).send({message:"Invalid or Missing Token"})
+        return
+       }
+       const decoded = jwt.verify(authToken,process.env.SECRET_KEY)
+       if(!decoded?.email || !decoded?.id || !mongoose.isValidObjectId(decoded?.id)){
+        resp.status(400).send({message:"Unauthorised User"})
+        return
+       }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if(typeof decoded?.email !== "string" || !emailRegex.test(decoded?.email)){
+            resp.status(400).send({message:"Invalid Email Format"})
+            return
+        }
+
+        const updatedEmail = decoded?.email?.trim()?.toLowerCase()
+        const domain = updatedEmail?.split("@")[1]
+        if(disposableEmailDomains.includes(domain)){
+           resp.status(400).send({message:"Spam Email found. Invalid Email"}) 
+           return
+        }
+    
+        const existingUser = await User.findOne({email:updatedEmail,_id:decoded.id}).select("-password")
+        if(!existingUser){
+            resp.status(400).send({message:"Unauthorised User"})
+            return
+        }
+
+        existingUser.firstName = firstName
+        existingUser.lastName = lastName
+        existingUser.phone = phone
+        existingUser.address = address
+        existingUser.city = city
+        existingUser.state = state
+        await existingUser.save()
+        
+        resp.status(200).send({message:"User details updated"})
+    } catch (error) {
+        return resp.status(500).send({message:"Internal Server Error"})
+    }
+}
+module.exports = {loginUser,verifyUser,checkUserDetails,updateUserDetails}
