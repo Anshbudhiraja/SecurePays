@@ -60,7 +60,7 @@ const loginUser = async(req,resp) => {
                 email:existingUser.email
             }
             const token = jwt.sign(payload,process.env.SECRET_KEY)
-            resp.status(200).send({message:"Login successfully",data:{token}})   
+            resp.status(200).send({message:"Login successfully",data:{token,role:existingUser.role}})   
             return
         }
 
