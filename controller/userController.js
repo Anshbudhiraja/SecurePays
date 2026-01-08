@@ -127,7 +127,7 @@ const verifyUser = async(req,resp) => {
         id:existingUser._id
        }
        const token = jwt.sign(payload,process.env.SECRET_KEY)
-       resp.status(200).send({message:result.message,data:{token}})
+       resp.status(200).send({message:result.message,data:{token,role:existingUser.role}})
        return
     } catch (error) {
         resp.status(500).send({message:"Internal Server Error",error})
@@ -169,10 +169,10 @@ const checkUserDetails = async(req,resp) =>{
             return
         }
         if(!existingUser.firstName && !existingUser.lastName){
-            resp.status(400).send({message:"User details not found"})
+            resp.status(200).send({message:"User details not found",data:{status:false}})
             return    
         }
-        resp.status(200).send({message:"User details fetched",data:existingUser})
+        resp.status(200).send({message:"User details fetched",data:{status:true,user:existingUser}})
     } catch (error) {
         return resp.status(500).send({message:"Internal Server Error"})
     }
