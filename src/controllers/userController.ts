@@ -5,41 +5,40 @@ import bcrypt from "bcrypt";
 import sendEmail from "../utils/emailService";
 import { generateOtp, verifyOtp } from "../utils/otpService"; 
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { AuthRequest } from "../middlewares/authMiddleware";
-
-dotenv.config();
+import { responseHandler } from "../handlers/responseHandler";
+import { config } from "../config/config";
 
 export const loginUser = async (req: Request, resp: Response): Promise<void> => {
     try {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            resp.status(404).send({ message: "Email and Password are required" });
+            responseHandler(resp,404,"Email and Password are required","error")
             return;
         }
 
         if (typeof email !== "string" || typeof password !== "string") {
-            resp.status(400).send({ message: "Invalid Email or Password" });
+            responseHandler(resp,400,"Invalid Email or Password","error")
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            resp.status(400).send({ message: "Invalid Email Format" });
+            responseHandler(resp,400,"Invalid Email Format" ,"error")
             return;
         }
 
         const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
         if (!passwordStrengthRegex.test(password)) {
-            resp.status(400).send({ message: "Password should have one uppercase, lowercase, symbol and number" });
+            responseHandler(resp,400,"Password should have one uppercase, lowercase, symbol and number", "error")
             return;
         }
 
         const domain = email.split("@")[1];
         if (disposableEmailDomains.includes(domain)) {
-            resp.status(400).send({ message: "Spam Email found. Invalid Email" });
+            responseHandler(resp,400,"Spam Email found. Invalid Email","error")
             return;
         }
 
@@ -48,13 +47,13 @@ export const loginUser = async (req: Request, resp: Response): Promise<void> => 
 
         if (existingUser) {
             if (!existingUser.password) {
-                resp.status(400).send({ message: "You have logined with your google account" });
+                responseHandler(resp,400,"You have logined with your google account","error")
                 return;
             }
 
             const isMatched = await bcrypt.compare(password, existingUser.password);
             if (!isMatched) {
-                resp.status(400).send({ message: "Invalid Credentials" });
+                responseHandler(resp,400,"Invalid Credentials","error")
                 return;
             }
 
@@ -65,7 +64,7 @@ export const loginUser = async (req: Request, resp: Response): Promise<void> => 
             }
 
             if (!existingUser.service) {
-                resp.status(400).send({ message: "Your service has been disabled. Contact website support" });
+                responseHandler(resp,400,"Your service has been disabled. Contact website support","error")
                 return;
             }
 
@@ -74,10 +73,9 @@ export const loginUser = async (req: Request, resp: Response): Promise<void> => 
                 email: existingUser.email
             };
 
-            const secretKey = process.env.SECRET_KEY as string;
+            const secretKey = config.SECRET_KEY as string;
             const token = jwt.sign(payload, secretKey);
-            
-            resp.status(200).send({ message: "Login successfully", data: { token, role: existingUser.role } });
+            responseHandler(resp,200,"Login successfully","success",{ token, role: existingUser.role })
             return;
         }
 
@@ -89,7 +87,7 @@ export const loginUser = async (req: Request, resp: Response): Promise<void> => 
         await sendEmail(resp, 201, updatedEmail, otp);
 
     } catch (error) {
-        resp.status(500).send({ message: "Internal Server Error", error });
+        responseHandler(resp,500,"Internal Server Error","fail")
     }
 };
 
@@ -98,24 +96,24 @@ export const verifyUser = async (req: Request, resp: Response): Promise<void> =>
         const { email, otp } = req.body;
 
         if (!email || typeof email !== "string") {
-            resp.status(400).send({ message: "Invalid or Missing Email" });
+            responseHandler(resp,400,"Invalid or Missing Email","error")
             return;
         }
 
         if (!otp || typeof otp !== "string") {
-            resp.status(400).send({ message: "Invalid or Missing Otp" });
+            responseHandler(resp,400,"Invalid or Missing Otp" ,"error")
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            resp.status(400).send({ message: "Invalid Email Format" });
+            responseHandler(resp,400,"Invalid Email Format" ,"error")
             return;
         }
 
         const otpRegex = /^\d{6}$/;
         if (!otpRegex.test(otp)) {
-            resp.status(400).send({ message: "Invalid Otp Format" });
+            responseHandler(resp,400,"Invalid Otp Format" ,"error")
             return;
         }
 
@@ -123,29 +121,29 @@ export const verifyUser = async (req: Request, resp: Response): Promise<void> =>
         const domain = updatedEmail.split("@")[1];
 
         if (disposableEmailDomains.includes(domain)) {
-            resp.status(400).send({ message: "Spam Email found. Invalid Email" });
+            responseHandler(resp,400,"Spam Email found. Invalid Email" ,"error")
             return;
         }
 
         const existingUser = await User.findOne({ email: updatedEmail }).select("-password");
         if (!existingUser) {
-            resp.status(400).send({ message: "User not found in the database" });
+            responseHandler(resp,400,"User not found in the database" ,"error")
             return;
         }
 
         if (existingUser.verified) {
-            resp.status(400).send({ message: "Your account is already verified" });
+            responseHandler(resp,400,"Your account is already verified" ,"error")
             return;
         }
 
         if (!existingUser.service) {
-            resp.status(400).send({ message: "Your service has been disabled. Contact website support" });
+            responseHandler(resp,400,"Your service has been disabled. Contact website support" ,"error")
             return;
         }
 
         const result = verifyOtp(updatedEmail, otp);
         if (!result.status) {
-            resp.status(400).send({ message: result.message });
+            responseHandler(resp,400,result.message ,"error")
             return;
         }
 
@@ -156,37 +154,35 @@ export const verifyUser = async (req: Request, resp: Response): Promise<void> =>
             id: existingUser._id
         };
 
-        const secretKey = process.env.SECRET_KEY as string;
+        const secretKey = config.SECRET_KEY as string;
         const token = jwt.sign(payload, secretKey);
-
-        resp.status(200).send({ message: result.message, data: { token, role: existingUser.role } });
+        responseHandler(resp,200,result.message ,"success",{ token, role: existingUser.role })
     } catch (error) {
-        resp.status(500).send({ message: "Internal Server Error", error });
+        responseHandler(resp,500,"Internal Server Error" ,"fail")
     }
 };
 
 export const checkUserDetails = async (req: AuthRequest, resp: Response): Promise<void> => {
     try {
         if (!req.user) {
-            resp.status(401).send({ message: "Unauthorized User" });
+            responseHandler(resp,401, "Unauthorized User","error");
             return;
         }
 
         if (!req.user.firstName && !req.user.lastName) {
-            resp.status(404).send({ message: "User details not found",data:null});
+            responseHandler(resp,400, "User details not found","error");
             return;
         }
-
-        resp.status(200).send({ message: "User details fetched", data: req.user});
+        responseHandler(resp,200, "User details fetched","success",req.user);
     } catch (error) {
-        resp.status(500).send({ message: "Internal Server Error" });
+        responseHandler(resp,500,"Internal Server Error","fail");
     }
 };
 
 export const updateUserDetails = async (req: AuthRequest, resp: Response): Promise<void> => {
     try {
         if (!req.user) {
-            resp.status(401).send({ message: "Unauthorized User" });
+            responseHandler(resp,401,"Unauthorized User","error")
             return;
         }
 
@@ -195,32 +191,32 @@ export const updateUserDetails = async (req: AuthRequest, resp: Response): Promi
         const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
 
         if (!firstName || !lastName || !phone || !address || !city || !state) {
-            resp.status(400).send({ message: "Missing Details. Fields are required" });
+            responseHandler(resp,400,"Missing Details. Fields are required","error")
             return;
         }
 
         if (!generalRegex.test(firstName)) {
-            resp.status(400).send({ message: "Invalid FirstName" });
+            responseHandler(resp,400,"Invalid FirstName","error")
             return;
         }
         if (!generalRegex.test(lastName)) {
-            resp.status(400).send({ message: "Invalid lastName" });
+            responseHandler(resp,400,"Invalid lastName","error")
             return;
         }
         if (!phoneRegex.test(phone)) {
-            resp.status(400).send({ message: "Invalid Phone Number" });
+            responseHandler(resp,400,"Invalid Phone Number","error")
             return;
         }
         if (!generalRegex.test(address)) {
-            resp.status(400).send({ message: "Invalid Address" });
+            responseHandler(resp,400,"Invalid Address","error")
             return;
         }
         if (!generalRegex.test(city)) {
-            resp.status(400).send({ message: "Invalid City" });
+            responseHandler(resp,400,"Invalid City","error")
             return;
         }
         if (!generalRegex.test(state)) {
-            resp.status(400).send({ message: "Invalid State" });
+            responseHandler(resp,400,"Invalid State","error")
             return;
         }
 
@@ -229,7 +225,7 @@ export const updateUserDetails = async (req: AuthRequest, resp: Response): Promi
 
         const existingUser = await User.findOne({ email: email, _id: id }).select("-password");
         if (!existingUser) {
-            resp.status(400).send({ message: "Unauthorised User" });
+            responseHandler(resp,401,"Unauthorised User","error")
             return;
         }
 
@@ -242,8 +238,8 @@ export const updateUserDetails = async (req: AuthRequest, resp: Response): Promi
 
         await existingUser.save();
 
-        resp.status(200).send({ message: "User details updated" });
+        responseHandler(resp,200,"User details updated","success");
     } catch (error) {
-        resp.status(500).send({ message: "Internal Server Error" });
+        responseHandler(resp,500,"Internal Server Error","fail");
     }
 };

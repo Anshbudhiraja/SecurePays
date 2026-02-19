@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import KYC from "../models/Kyc";
 import { AuthRequest } from "../middlewares/authMiddleware";
+import { config } from "../config/config";
+import { responseHandler } from "../handlers/responseHandler";
 
 const deleteFile = (filename: string, type: "video" | "pdf"): void => {
     const uploadsDir = path.resolve("uploads");
@@ -16,15 +18,13 @@ const deleteFile = (filename: string, type: "video" | "pdf"): void => {
 
 export const createKycDocument = async (req: AuthRequest, resp: Response): Promise<void> => {
     try {
-        // TypeScript safety check to ensure req.user exists
         if (!req.user) {
-            resp.status(401).send({ message: "Unauthorized User" });
+            responseHandler(resp,401,"Unauthorized User","error")
             return;
         }
         
         const id = req.user._id;
         
-        // Define the specific shape Multer returns when using upload.fields()
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
 
         if (!files || !files.video || !files.video[0] || !files.pdf || !files.pdf[0]) {
@@ -34,30 +34,38 @@ export const createKycDocument = async (req: AuthRequest, resp: Response): Promi
             if (files?.pdf?.[0]?.filename) {
                 deleteFile(files.pdf[0].filename, "pdf");
             }
-            resp.status(400).send({ message: "File does not exist" });
+            responseHandler(resp,400,"File does not exist" ,"error")
             return;
         }
 
         const video = files.video[0];
         const pdf = files.pdf[0];
         
-        // Note: Hardcoding localhost is fine for dev, but consider using an env variable for production URLs
-        const videoLink = `http://localhost:5000/uploads/videos/${video.filename}`;
-        const pdfLink = `http://localhost:5000/uploads/pdfs/${pdf.filename}`;
-        
+        const videoLink = `${config.BACKEND_DOMAIN}/uploads/videos/${video.filename}`;
+        const pdfLink = `${config.BACKEND_DOMAIN}/uploads/pdfs/${pdf.filename}`;
+        const existingKyc = await KYC.findOne({userId:id})
+        if(existingKyc){
+           if (files?.video?.[0]?.filename) {
+                deleteFile(video.filename, "video");
+            }
+            if (files?.pdf?.[0]?.filename) {
+                deleteFile(pdf.filename, "pdf");
+            }
+            responseHandler(resp,400,"You have already requested for Kyc","error")
+            return; 
+        }
         const result = await KYC.create({ userId: id, video: videoLink, pdf: pdfLink });
-        
-        resp.status(201).send({ message: "File uploaded successfully", result });
+        responseHandler(resp,201,"File uploaded successfully","success",result)
     } catch (error) {
         console.log(error);
-        resp.status(500).send({ message: "Internal Server Error" });
+        responseHandler(resp,500,"Internal Server Error","fail")
     }
 };
 
 export const getKycDocument = async (req: AuthRequest, resp: Response): Promise<void> => {
     try {
         if (!req.user) {
-            resp.status(401).send({ message: "Unauthorized User" });
+            responseHandler(resp,401,"Unauthorized User","error")
             return;
         }
         
@@ -65,12 +73,11 @@ export const getKycDocument = async (req: AuthRequest, resp: Response): Promise<
         const existingKyc = await KYC.findOne({ userId: id });
         
         if (!existingKyc) {
-            resp.status(400).send({ message: "This user does not request Kyc Verification" });
+            responseHandler(resp,400,"This user does not request Kyc Verification","error")
             return;
         }
-        
-        resp.status(200).send({ message: "Kyc fetched successfully", data: existingKyc });
+        responseHandler(resp,200,"Kyc fetched successfully","success",existingKyc)
     } catch (error) {
-        resp.status(500).send({ message: "Internal Server Error" });
+        responseHandler(resp,500,"Internal Server Error","fail")
     }
 };

@@ -4,6 +4,8 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import disposableEmailDomains from "disposable-email-domains";
 import User, { IUser } from "../models/User"; 
+import { responseHandler } from "../handlers/responseHandler";
+import { config } from "../config/config";
 
 dotenv.config();
 
@@ -25,31 +27,31 @@ const authMiddleware = async (
         const token = req.headers.authorization;
         
         if (!token || !token.startsWith("Bearer ")) {
-            resp.status(400).send({ message: "Invalid or Missing Token" });
+            responseHandler(resp,400,"Invalid or Missing Token","error")
             return;
         }
 
         const authToken = token.split(" ")[1];
         if (!authToken) {
-            resp.status(400).send({ message: "Invalid or Missing Token" });
+            responseHandler(resp,400,"Invalid or Missing Token","error")
             return;
         }
 
-        const secretKey = process.env.SECRET_KEY as string;
+        const secretKey = config.SECRET_KEY as string;
         if (!secretKey) {
-            throw new Error("SECRET_KEY is missing in environment variables.");
+            responseHandler(resp,400,"SECRET_KEY is missing in environment variables.","error");
         }
 
         const decoded = jwt.verify(authToken, secretKey) as DecodedToken;
 
         if (!decoded?.email || !decoded?.id || !mongoose.isValidObjectId(decoded?.id)) {
-            resp.status(400).send({ message: "Unauthorised User" });
+            responseHandler(resp,400,"Unauthorised User","error")
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (typeof decoded?.email !== "string" || !emailRegex.test(decoded?.email)) {
-            resp.status(400).send({ message: "Invalid Email Format" });
+            responseHandler(resp,400,"Invalid Email Format","error")
             return;
         }
 
@@ -57,7 +59,7 @@ const authMiddleware = async (
         const domain = updatedEmail.split("@")[1];
         
         if (disposableEmailDomains.includes(domain)) {
-            resp.status(400).send({ message: "Spam Email found. Invalid Email" });
+            responseHandler(resp,400,"Spam Email found. Invalid Email","error")
             return;
         }
 
@@ -67,7 +69,7 @@ const authMiddleware = async (
         }).select("-password");
         
         if (!existingUser) {
-            resp.status(400).send({ message: "Unauthorised User" });
+            responseHandler(resp,401,"Unauthorised User" ,"error")
             return;
         }
 
@@ -75,7 +77,7 @@ const authMiddleware = async (
         next();
         
     } catch (error) {
-        resp.status(400).send({ message: "Invalid Token: Token Mismatch" });
+        responseHandler(resp,500, "Invalid Token: Token Mismatch","fail")
     }
 };
 

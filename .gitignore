@@ -3,3 +3,5 @@ node_modules/
 
 # Uploads folder inside src
 uploads/
+
+.env

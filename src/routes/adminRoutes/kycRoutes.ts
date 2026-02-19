@@ -1,7 +1,7 @@
 import { Router } from "express";
-import authMiddleware from "../middlewares/authMiddleware";
-import { createKycDocument, getKycDocument } from "../controllers/kycController";
-import upload from "../middlewares/upload";
+import authMiddleware from "../../middlewares/authMiddleware";
+import { createKycDocument, getKycDocument } from "../../controllers/kycController";
+import upload from "../../middlewares/upload";
 
 const router = Router();
 
@@ -15,6 +15,6 @@ router.post(
     createKycDocument
 );
 
-router.get("/get", authMiddleware, getKycDocument);
+router.get("/", authMiddleware, getKycDocument);
 
 export default router;
