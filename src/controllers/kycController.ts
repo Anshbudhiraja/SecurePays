@@ -149,6 +149,8 @@ export const acceptKycRequest = async (req: AuthRequest, resp: Response): Promis
 
         user.kyc_verified = true;
         await user.save();
+        existingKyc.status = true
+        await existingKyc.save()
         responseHandler(resp, 200, "KYC request accepted successfully", "success");
 
     } catch (error) {

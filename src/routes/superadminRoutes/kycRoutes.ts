@@ -3,7 +3,7 @@ import { acceptKycRequest, declineKycRequest, getAllKycRequestForSuperAdmin } fr
 
 const router = Router();
 router.get("/",getAllKycRequestForSuperAdmin)
-router.get("/accept",acceptKycRequest)
-router.get("/decline",declineKycRequest)
+router.put("/accept",acceptKycRequest)
+router.put("/decline",declineKycRequest)
 
 export default router;

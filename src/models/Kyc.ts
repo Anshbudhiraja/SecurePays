@@ -4,6 +4,7 @@ export interface IKyc extends Document {
     userId: Types.ObjectId;
     video: string;
     pdf: string;
+    status?: boolean;
 }
 
 const kycSchema: Schema<IKyc> = new Schema({
@@ -19,6 +20,10 @@ const kycSchema: Schema<IKyc> = new Schema({
     pdf: {
         type: String,
         required: true
+    },
+    status:{
+        type:Boolean,
+        default:false
     }
 });
 
