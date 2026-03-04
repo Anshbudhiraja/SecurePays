@@ -168,6 +168,10 @@ export const checkUserDetails = async (req: AuthRequest, resp: Response): Promis
             responseHandler(resp,401, "Unauthorized User","error");
             return;
         }
+        if (!req.user?.service || !req.user?.verified) {
+            responseHandler(resp, 401, "Unauthorized User", "error");
+            return;
+        }
 
         if (!req.user.firstName && !req.user.lastName) {
             responseHandler(resp,400, "User details not found","error");
@@ -185,7 +189,10 @@ export const updateUserDetails = async (req: AuthRequest, resp: Response): Promi
             responseHandler(resp,401,"Unauthorized User","error")
             return;
         }
-
+        if (!req.user?.service || !req.user?.verified) {
+            responseHandler(resp, 401, "Unauthorized User", "error");
+            return;
+        }
         const { firstName, lastName, phone, address, city, state } = req.body;
         const generalRegex = /^[A-Za-z][A-Za-z\s'-]{1,49}$/;
         const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
@@ -207,7 +214,7 @@ export const updateUserDetails = async (req: AuthRequest, resp: Response): Promi
             responseHandler(resp,400,"Invalid Phone Number","error")
             return;
         }
-        if (!generalRegex.test(address)) {
+        if (typeof address !== "string") {
             responseHandler(resp,400,"Invalid Address","error")
             return;
         }

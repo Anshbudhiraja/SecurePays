@@ -16,6 +16,8 @@ export interface IUser extends Document {
     role?: "superadmin" | "admin"; 
     createdAt: Date; 
     updatedAt: Date; 
+    upiId?: string;
+    upiQr?: string;
 }
 
 const userSchema: Schema<IUser> = new Schema(
@@ -38,6 +40,8 @@ const userSchema: Schema<IUser> = new Schema(
             enum: ["superadmin", "admin"], 
             default: "admin" 
         },
+        upiId: { type: String, required: false, },
+        upiQr: { type: String, required: false },
     },
     { timestamps: true }
 );

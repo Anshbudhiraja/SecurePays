@@ -24,6 +24,10 @@ export const createKycDocument = async (req: AuthRequest, resp: Response): Promi
             responseHandler(resp,401,"Unauthorized User","error")
             return;
         }
+        if (!req.user.service || !req.user.verified) {
+            responseHandler(resp, 401, "Unauthorized User", "error");
+            return;
+        }
         
         const id = req.user._id;
         
@@ -67,6 +71,10 @@ export const getKycDocument = async (req: AuthRequest, resp: Response): Promise<
     try {
         if (!req.user) {
             responseHandler(resp,401,"Unauthorized User","error")
+            return;
+        }
+        if (!req.user.service || !req.user.verified) {
+            responseHandler(resp, 401, "Unauthorized User", "error");
             return;
         }
         
