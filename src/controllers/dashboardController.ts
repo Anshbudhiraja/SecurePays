@@ -28,7 +28,6 @@ export const getCashFlowAnalysis = async (req: AuthRequest, resp: Response): Pro
 
         const cashFlowMap = new Map<string, { inflow: number; outflow: number }>();
 
-        // Pre-fill the last 30 days
         for (let i = 0; i <= daysToLookBack; i++) {
             const date = new Date(startDate);
             date.setDate(date.getDate() + i);
@@ -36,7 +35,6 @@ export const getCashFlowAnalysis = async (req: AuthRequest, resp: Response): Pro
             cashFlowMap.set(dateString, { inflow: 0, outflow: 0 });
         }
 
-        // Fill with actual data
         statements.forEach(stmt => {
             const dateString = stmt.createdAt.toISOString().split('T')[0];
             const current = cashFlowMap.get(dateString) || { inflow: 0, outflow: 0 };
@@ -49,8 +47,6 @@ export const getCashFlowAnalysis = async (req: AuthRequest, resp: Response): Pro
             cashFlowMap.set(dateString, current);
         });
 
-        // --- NEW TRANSFORMATION LOGIC ---
-        // Convert the Map into the requested flat array format
         const chartData: { label: string; inflow: number; outflow: number }[] = [];
 
         cashFlowMap.forEach((value, key) => {
@@ -61,7 +57,6 @@ export const getCashFlowAnalysis = async (req: AuthRequest, resp: Response): Pro
             });
         });
 
-        // Send the formatted data
         responseHandler(resp, 200, "Cash flow analysis generated", "success", chartData);
 
     } catch (error) {
@@ -186,7 +181,7 @@ export const getTicketBookingTrends = async (req: AuthRequest, resp: Response): 
 };
 export const getDashboardSummary = async (req: AuthRequest, resp: Response): Promise<void> => {
     try {
-        if (!req.user) {
+        if (!req.user || req.user.role !== "admin") {
             return responseHandler(resp, 401, "Unauthorized User", "error");
         }
         if (!req.user.service || !req.user.verified) {
