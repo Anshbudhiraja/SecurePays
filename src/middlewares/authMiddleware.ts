@@ -27,31 +27,31 @@ const authMiddleware = async (
         const token = req.headers.authorization;
         
         if (!token || !token.startsWith("Bearer ")) {
-            responseHandler(resp,400,"Invalid or Missing Token","error")
+            responseHandler(resp,401,"Invalid or Missing Token","error")
             return;
         }
 
         const authToken = token.split(" ")[1];
         if (!authToken) {
-            responseHandler(resp,400,"Invalid or Missing Token","error")
+            responseHandler(resp,401,"Invalid or Missing Token","error")
             return;
         }
 
         const secretKey = config.SECRET_KEY as string;
         if (!secretKey) {
-            responseHandler(resp,400,"SECRET_KEY is missing in environment variables.","error");
+            responseHandler(resp,401,"SECRET_KEY is missing in environment variables.","error");
         }
 
         const decoded = jwt.verify(authToken, secretKey) as DecodedToken;
 
         if (!decoded?.email || !decoded?.id || !mongoose.isValidObjectId(decoded?.id)) {
-            responseHandler(resp,400,"Unauthorised User","error")
+            responseHandler(resp,401,"Unauthorised User","error")
             return;
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (typeof decoded?.email !== "string" || !emailRegex.test(decoded?.email)) {
-            responseHandler(resp,400,"Invalid Email Format","error")
+            responseHandler(resp,401,"Invalid Email Format","error")
             return;
         }
 
@@ -59,7 +59,7 @@ const authMiddleware = async (
         const domain = updatedEmail.split("@")[1];
         
         if (disposableEmailDomains.includes(domain)) {
-            responseHandler(resp,400,"Spam Email found. Invalid Email","error")
+            responseHandler(resp,401,"Spam Email found. Invalid Email","error")
             return;
         }
 

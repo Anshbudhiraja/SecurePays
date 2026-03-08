@@ -6,3 +6,4 @@ uploads/
 reports/
 
 .env
+firebase-service-account.json

@@ -3,7 +3,8 @@ import {
     loginUser, 
     verifyUser, 
     checkUserDetails, 
-    updateUserDetails 
+    updateUserDetails, 
+    googleLogin
 } from "../controllers/userController";
 import authMiddleware from "../middlewares/authMiddleware";
 
@@ -13,5 +14,6 @@ router.post("/login", loginUser);
 router.post("/verify", verifyUser);
 router.get("/checkUserDetails", authMiddleware, checkUserDetails);
 router.put("/updateUserDetails", authMiddleware, updateUserDetails);
+router.post("/google-login", googleLogin);
 
 export default router;

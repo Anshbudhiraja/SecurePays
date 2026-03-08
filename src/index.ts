@@ -3,9 +3,11 @@ import cors from "cors";
 import path from "path";
 import routes from "./routes/router";
 import connectDB from "./config/connectDB";
+import { initializeFirebase } from "./config/firebase";
 
 const app: Express = express();
 
+initializeFirebase();
 app.use(express.json());
 app.use(cors());
 

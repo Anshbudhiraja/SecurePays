@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { responseHandler } from "../handlers/responseHandler";
 import { config } from "../config/config";
+import * as admin from "firebase-admin"
 
 export const loginUser = async (req: Request, resp: Response): Promise<void> => {
     try {
@@ -248,5 +249,73 @@ export const updateUserDetails = async (req: AuthRequest, resp: Response): Promi
         responseHandler(resp,200,"User details updated","success");
     } catch (error) {
         responseHandler(resp,500,"Internal Server Error","fail");
+    }
+};
+
+export const googleLogin = async (req: Request, resp: Response): Promise<void> => {
+    try {
+        const { idToken } = req.body;
+
+        if (!idToken) {
+            responseHandler(resp, 400, "Google ID Token is required", "error");
+            return;
+        }
+
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { email, name, picture, email_verified } = decodedToken;
+
+        if (!email) {
+            responseHandler(resp, 400, "Email not found in Google Token", "error");
+            return;
+        }
+
+        const updatedEmail = email.trim().toLowerCase();
+
+        let existingUser = await User.findOne({ email: updatedEmail });
+
+        if (existingUser) {
+            if (!existingUser.service) {
+                responseHandler(resp, 400, "Your service has been disabled. Contact support", "error");
+                return;
+            }
+
+            if (!existingUser.image) existingUser.image = picture;
+            await existingUser.save();
+        } else {
+            const nameParts = name ? name.split(" ") : [""];
+            const firstName = nameParts[0];
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
+
+            existingUser = await User.create({
+                email: updatedEmail,
+                firstName: firstName,
+                lastName: lastName,
+                image: picture,
+                verified: email_verified || true, 
+                role: "admin", 
+                service: true
+            });
+        }
+
+        const payload = {
+            id: existingUser._id,
+            email: existingUser.email
+        };
+
+        const secretKey = config.SECRET_KEY as string;
+        const token = jwt.sign(payload, secretKey);
+
+        responseHandler(resp, 200, "Google login successful", "success", {
+            token,
+            role: existingUser.role,
+            user: {
+                firstName: existingUser.firstName,
+                image: existingUser.image
+            }
+        });
+
+    } catch (error) {
+        console.error("Google Auth Error:", error);
+        responseHandler(resp, 401, "Invalid Google Token", "fail");
     }
 };
