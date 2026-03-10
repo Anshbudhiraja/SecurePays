@@ -16,12 +16,17 @@ export interface IMessage extends Document {
     conversationId: mongoose.Types.ObjectId;
     senderId: mongoose.Types.ObjectId;
     text: string;
+    seen:Boolean;
 }
 
 const messageSchema = new Schema({
     conversationId: { type: Schema.Types.ObjectId, ref: "Conversation", required: true },
     senderId: { type: Schema.Types.ObjectId, ref: "users", required: true },
-    text: { type: String, required: true }
+    text: { type: String, required: true },
+    seen: { 
+    type: Boolean, 
+    default: false 
+    }
 }, { timestamps: true });
 
 export const Message = mongoose.model<IMessage>("Message", messageSchema);

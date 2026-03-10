@@ -18,11 +18,18 @@ export const startChatWorker = async () => {
         if (!receiver) {
           return channel.ack(data);
         }
-        let conversation = await Conversation.findOneAndUpdate(
-        { participants: { $all: [senderId, receiverId] } },
-        { lastMessage: text },
-        { upsert: true, new: true }
-      );
+        let conversation = await Conversation.findOne({
+          participants: { $all: [senderId, receiverId] }
+        });
+        if (!conversation) {
+        conversation = await Conversation.create({
+          participants: [senderId, receiverId],
+          lastMessage: text
+        });
+      } else {
+        conversation.lastMessage = text;
+        await conversation.save();
+      }
         
       const message = await Message.create({
         conversationId: conversation._id,
@@ -32,9 +39,9 @@ export const startChatWorker = async () => {
       io.to(receiverId.toString()).emit("newMessage", message);
       io.to(senderId.toString()).emit("newMessage", message);
       channel.ack(data);
-     } catch (error) {
+     } catch (error:any) {
       console.error("Worker Error:", error);
-      channel.nack(data, false, true);
+      channel.nack(data, false, false);
      }
   });
 };

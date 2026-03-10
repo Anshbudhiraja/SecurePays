@@ -18,6 +18,7 @@ export interface IUser extends Document {
     updatedAt: Date; 
     upiId?: string;
     upiQr?: string;
+    status?: "active" | "inactive"
 }
 
 const userSchema: Schema<IUser> = new Schema(
@@ -42,6 +43,11 @@ const userSchema: Schema<IUser> = new Schema(
         },
         upiId: { type: String, required: false, },
         upiQr: { type: String, required: false },
+        status: { 
+            type: String, 
+            enum: ["online", "offline"], 
+            default: "offline" 
+        }
     },
     { timestamps: true }
 );

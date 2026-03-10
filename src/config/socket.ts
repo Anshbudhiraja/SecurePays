@@ -13,7 +13,7 @@ interface DecodedToken extends jwt.JwtPayload {
   id: string;
   email: string;
 }
-
+const onlineUsers = new Map<string, Set<string>>();
 export const initSocket = (server: http.Server) => {
   io = new Server(server, {
     cors: { origin: "*" }
@@ -21,7 +21,7 @@ export const initSocket = (server: http.Server) => {
 
   io.use(async (socket, next) => {
     try {
-      const authHeader = socket.handshake.headers.authorization;
+     const authHeader =socket.handshake.headers.authorization || socket.handshake.auth?.token;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return next(new Error("Invalid or Missing Token"));
       }
@@ -65,13 +65,47 @@ export const initSocket = (server: http.Server) => {
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", async(socket) => {
     const user = socket.data.user;
     const userId = user._id.toString();
+
+    if (!onlineUsers.has(userId)) {
+      onlineUsers.set(userId, new Set());
+    }
+
+    onlineUsers.get(userId)?.add(socket.id);
+    if (onlineUsers.get(userId)?.size === 1) {
+      await User.findByIdAndUpdate(userId, { status: "online" });
+
+      io.emit("userStatusUpdate", {
+        userId,
+        status: "online",
+      });
+    }
+
     socket.join(userId);
-    console.log(`User ${userId} connected`);
-    socket.on("disconnect", () => {
-      console.log(`User ${userId} disconnected`);
+    socket.emit("onlineUsers", Array.from(onlineUsers.keys()));
+    console.log(`User ${userId} connected with socket ${socket.id}`);
+
+    socket.on("disconnect", async() => {
+      const userSockets = onlineUsers.get(userId);
+
+    if (userSockets) {
+      userSockets.delete(socket.id);
+
+      if (userSockets.size === 0) {
+        onlineUsers.delete(userId);
+
+        await User.findByIdAndUpdate(userId, { status: "offline" });
+
+        io.emit("userStatusUpdate", {
+          userId,
+          status: "offline",
+        });
+
+        console.log(`User ${userId} offline`);
+      }
+    }
     });
   });
   return io;

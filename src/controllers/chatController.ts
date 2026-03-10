@@ -108,3 +108,28 @@ export const searchUsers = async (req: AuthRequest, res: Response) => {
     return responseHandler(res, 500, "Server Error", "error");
   }
 };
+export const markMessagesAsSeen = async (req: AuthRequest, res: Response) => {
+    try {
+        const { conversationId } = req.params;
+        const userId = (req as any).user?._id;
+        if (!conversationId || !mongoose.isValidObjectId(conversationId)) {
+          return responseHandler(res, 400, "Invalid conversationId", "error");
+        }
+        await Message.updateMany(
+            { conversationId, senderId: { $ne: userId }, seen: false },
+            { $set: { seen: true } }
+        );
+
+        const conversation = await Conversation.findById(conversationId);
+        const otherParticipantId:any = conversation?.participants.find(p => p.toString() !== userId.toString());
+        
+        if (otherParticipantId) {
+          const io = getIO();
+          io.to(otherParticipantId.toString()).emit("messagesSeen", { conversationId });
+        }
+
+        return responseHandler(res, 200, "Messages marked as seen", "success");
+    } catch (error) {
+        return responseHandler(res, 500, "Server Error", "error");
+    }
+};
