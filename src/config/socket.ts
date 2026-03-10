@@ -3,12 +3,20 @@ import http from "http";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import disposableEmailDomains from "disposable-email-domains";
-
+import { RateLimiterMemory } from "rate-limiter-flexible"
 import User from "../models/User";
 import { config } from "./config";
 
 let io: Server;
 
+const connectionLimiter = new RateLimiterMemory({
+  points: 5,
+  duration: 60,
+});
+const eventLimiter = new RateLimiterMemory({
+  points: 10,
+  duration: 1,
+});
 interface DecodedToken extends jwt.JwtPayload {
   id: string;
   email: string;
@@ -21,6 +29,8 @@ export const initSocket = (server: http.Server) => {
 
   io.use(async (socket, next) => {
     try {
+      const ip = socket.handshake.address;
+      await connectionLimiter.consume(ip);
      const authHeader =socket.handshake.headers.authorization || socket.handshake.auth?.token;
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return next(new Error("Invalid or Missing Token"));
@@ -60,8 +70,11 @@ export const initSocket = (server: http.Server) => {
 
       socket.data.user = existingUser;
       next();
-    } catch (error) {
-      next(new Error("Invalid Token"));
+    } catch (error:any) {
+      if (error?.msBeforeNext) {
+        return next(new Error("Too many connection attempts. Try again later."));
+      }
+      next(new Error("Authentication Failed"));
     }
   });
 
@@ -69,6 +82,16 @@ export const initSocket = (server: http.Server) => {
     const user = socket.data.user;
     const userId = user._id.toString();
 
+    socket.use(async (packet, next) => {
+      try {
+        await eventLimiter.consume(userId);
+        next();
+      } catch (rateLimitRes) {
+        socket.emit("error", { message: "Rate limit exceeded. Slow down!" });
+        console.warn(`User ${userId} rate limited on event: ${packet[0]}`);
+      }
+    });
+    
     if (!onlineUsers.has(userId)) {
       onlineUsers.set(userId, new Set());
     }
