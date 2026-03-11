@@ -91,6 +91,24 @@ export const initSocket = (server: http.Server) => {
         console.warn(`User ${userId} rate limited on event: ${packet[0]}`);
       }
     });
+
+    socket.on("call-user", (data: { to: string; offer: any }) => {
+      const fromUserId = socket.data.user._id.toString();
+      io.to(data.to).emit("incoming-call", { 
+        from: fromUserId, 
+        offer: data.offer,
+        fromName: `${socket.data.user.firstName} ${socket.data.user.lastName}` 
+      });
+    });
+    socket.on("answer-call", (data: { to: string; answer: any }) => {
+      io.to(data.to).emit("call-accepted", { answer: data.answer });
+    });
+    socket.on("ice-candidate", (data: { to: string; candidate: any }) => {
+      io.to(data.to).emit("ice-candidate", { candidate: data.candidate });
+    });
+    socket.on("end-call", (data: { to: string }) => {
+      io.to(data.to).emit("call-ended");
+    });
     
     if (!onlineUsers.has(userId)) {
       onlineUsers.set(userId, new Set());
